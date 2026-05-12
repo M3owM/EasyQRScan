@@ -1,13 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 function App() {
   // สร้าง State สำหรับเก็บค่าต่างๆ ที่ User เลือก
   const [text, setText] = useState('');
-  const [fgColor, setFgColor] = useState('#000000'); // สีของตัว QR Code (ค่าเริ่มต้นสีดำ)
-  const [bgColor, setBgColor] = useState('#ffffff'); // สีพื้นหลัง (ค่าเริ่มต้นสีขาว)
+  const [fgColor, setFgColor] = useState('#000000'); // สีของตัว QR Code
+  const [bgColor, setBgColor] = useState('#ffffff'); // สีพื้นหลัง
   const [logo, setLogo] = useState(null); // ไฟล์รูปโลโก้
-  const [qrSize, setQrSize] = useState(256); // ขนาดรูปภาพตอนดาวน์โหลด (ค่าเริ่มต้น 256px)
+  const [qrSize, setQrSize] = useState(256); // ขนาดรูปภาพตอนดาวน์โหลด
+
+  // 1. State สำหรับเก็บยอดรวมจากผู้ใช้ทั่วโลก
+  const [globalCount, setGlobalCount] = useState(0);
+
+  // 2. กำหนดชื่อโปรเจกต์ของคุณ (อย่าลืมเปลี่ยนชื่อ NAMESPACE เพื่อไม่ให้ซ้ำกับคนอื่น)
+  const NAMESPACE = 'my_super_qrcode_app_009'; 
+  const COUNTER_NAME = 'downloads';
+
+  // 3. ดึงข้อมูลสถิติจาก Server เมื่อเปิดเว็บครั้งแรก
+  useEffect(() => {
+    fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${COUNTER_NAME}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.count !== undefined) {
+          setGlobalCount(data.count);
+        }
+      })
+      .catch((err) => console.error('ไม่สามารถดึงข้อมูลสถิติได้:', err));
+  }, []);
 
   // ฟังก์ชันสำหรับจัดการตอนที่ User อัปโหลดไฟล์รูปโลโก้
   const handleLogoUpload = (e) => {
@@ -31,6 +50,16 @@ function App() {
       downloadLink.href = pngUrl;
       downloadLink.download = `custom-qrcode-${qrSize}px.png`;
       downloadLink.click();
+
+      // 4. เมื่อกดดาวน์โหลด ให้ยิง API ไปบอก Server เพื่อบวกเลขเพิ่ม 1
+      fetch(`https://api.counterapi.dev/v1/${NAMESPACE}/${COUNTER_NAME}/up`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.count !== undefined) {
+            setGlobalCount(data.count); // อัปเดตตัวเลขบนหน้าเว็บทันที
+          }
+        })
+        .catch((err) => console.error('ไม่สามารถอัปเดตสถิติได้:', err));
     }
   };
 
@@ -82,7 +111,7 @@ function App() {
             style={{ marginTop: '5px' }} 
           />
           {logo && (
-            <button onClick={() => setLogo(null)} style={{ marginLeft: '10px', color: 'red', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>
+            <button onClick={() => setLogo(null)} style={{ marginLeft: '10px', color: '#ff6b6b', cursor: 'pointer', background: 'none', border: 'none', textDecoration: 'underline' }}>
               ลบโลโก้
             </button>
           )}
@@ -108,21 +137,21 @@ function App() {
         <div style={{ textAlign: 'center' }}>
           <h3 style={{ color: 'white' }}>👀 ดูพรีวิว:</h3>
           {/* กรอบล้อมรอบ QR Code */}
-          <div style={{ display: 'inline-block', padding: '15px', background: bgColor, borderRadius: '10px', boxShadow: '0px 4px 10px rgba(0,0,0,0.1)' }}>
+          <div style={{ display: 'inline-block', padding: '15px', background: bgColor, borderRadius: '10px', boxShadow: '0px 4px 10px rgba(0,0,0,0.3)' }}>
             <QRCodeCanvas 
               id="qr-code-canvas" 
               value={text} 
-              size={qrSize} // ขนาดภาพจริงที่จะถูกเรนเดอร์ลง Canvas
-              fgColor={fgColor} // สี QR
-              bgColor={bgColor} // สีพื้นหลัง
-              level={"H"} // ระดับการแก้ไขข้อผิดพลาดระดับสูงสุด (H) เพื่อให้ใส่โลโก้แล้วยังสแกนติด
+              size={qrSize} 
+              fgColor={fgColor} 
+              bgColor={bgColor} 
+              level={"H"} 
               imageSettings={logo ? {
                 src: logo,
-                height: qrSize * 0.22, // ปรับให้โลโก้มีขนาดประมาณ 22% ของภาพรวม
+                height: qrSize * 0.22, 
                 width: qrSize * 0.22,
-                excavate: true, // เจาะพื้นหลังตรงรูปโลโก้ให้โล่ง เพื่อความสวยงาม
+                excavate: true, 
               } : undefined}
-              style={{ width: '100%', maxWidth: '256px', height: 'auto' }} // CSS บังคับให้หน้าพรีวิวบนเว็บดูเล็ก ไม่ล้นจอ แต่ตอนโหลดจะได้ภาพใหญ่ตามปกติ
+              style={{ width: '100%', maxWidth: '256px', height: 'auto' }} 
             />
           </div>
           
@@ -131,12 +160,31 @@ function App() {
           {/* ปุ่มดาวน์โหลด */}
           <button 
             onClick={handleDownload} 
-            style={{ padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#007BFF', color: 'white', border: 'none', borderRadius: '8px', boxShadow: '0px 4px 6px rgba(0,123,255,0.3)' }}
+            style={{ padding: '12px 24px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', backgroundColor: '#007BFF', color: 'white', border: 'none', borderRadius: '8px', boxShadow: '0px 4px 6px rgba(0,0,0,0.3)' }}
           >
             ดาวน์โหลดภาพ ({qrSize}px)
           </button>
         </div>
       )}
+
+      {/* --- ส่วนแสดงสถิติ (Global Counter) --- */}
+      <div style={{ 
+        marginTop: '60px', 
+        paddingTop: '20px', 
+        borderTop: '2px dashed rgba(255,255,255,0.3)', 
+        textAlign: 'center',
+        color: 'white'
+      }}>
+        <h3 style={{ margin: '0 0 10px 0' }}>🌍 สถิติการใช้งาน</h3>
+        <p style={{ fontSize: '18px', margin: 0, textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
+          มีผู้ดาวน์โหลด QR Code จากเว็บนี้ไปแล้ว 
+          <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#ffd700', margin: '0 10px' }}>
+            {globalCount}
+          </span> 
+          ครั้ง
+        </p>
+      </div>
+
     </div>
   );
 }
