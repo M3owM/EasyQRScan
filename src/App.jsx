@@ -143,11 +143,11 @@ const getStyles = (isDark) => `
 
   .card-title {
     font-family: 'Syne', sans-serif;
-    font-size: 0.72rem;
+    font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: ${isDark ? 'rgba(200,180,240,0.5)' : 'rgba(120,80,180,0.55)'};
+    color: ${isDark ? 'rgba(220,200,255, 0.75)' : 'rgba(17, 1, 42, 0.75)'};
     margin-bottom: 20px;
     display: flex;
     align-items: center;
